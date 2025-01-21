@@ -36,7 +36,7 @@ type auctionElement struct {
 	Crm      interface{} `json:"crm"`
 	Reports  bool        `json:"reports"`
 }
-type auctionTableData struct {
+type AuctionTableData struct {
 	Result  string           `json:"result"`
 	Time    int              `json:"time"`
 	Pages   int              `json:"pages"`
@@ -44,18 +44,18 @@ type auctionTableData struct {
 }
 
 type AuctionTableModel struct {
-	auctions []auctionTableData
+	auctions []AuctionTableData
 }
 
 func NewAuctionTableModel() *AuctionTableModel {
-	return &AuctionTableModel{auctions: make([]auctionTableData, 0)}
+	return &AuctionTableModel{auctions: make([]AuctionTableData, 0)}
 }
 
-func (m AuctionTableModel) GetAll() []auctionTableData {
+func (m AuctionTableModel) GetAll() []AuctionTableData {
 	return m.auctions
 }
 
-func (m AuctionTableModel) GetByFilter() []auctionTableData {
+func (m AuctionTableModel) GetByFilter() []AuctionTableData {
 	return nil
 }
 

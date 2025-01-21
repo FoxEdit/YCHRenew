@@ -5,6 +5,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
@@ -20,14 +21,23 @@ const (
 type HeaderContent struct {
 	headerLinks  *ViewModels.LinkViewModel
 	headerPopups *ViewModels.PopupViewModel
+	parentWindow *fyne.Window
 }
 
-func NewHeaderContent(links *ViewModels.LinkViewModel, popups *ViewModels.PopupViewModel) *HeaderContent {
-	return &HeaderContent{headerLinks: links, headerPopups: popups}
+func NewHeaderContent(links *ViewModels.LinkViewModel, popups *ViewModels.PopupViewModel, parentWindow *fyne.Window) *HeaderContent {
+	return &HeaderContent{headerLinks: links, headerPopups: popups, parentWindow: parentWindow}
 }
 
 func (h *HeaderContent) Build() fyne.CanvasObject {
 	headerAvatar := h.createAvatar()
+
+	// separate to "createAuthDialog" func
+	loginBtn := widget.NewButton("Новая авторизация", func() { fmt.Print("TODO: login btn") })
+	loadBtn := widget.NewButton("Предыдущая сессия", func() { fmt.Print("TODO: load btn") })
+	authContainer := container.NewVBox(loginBtn, loadBtn, NewHSpacer(10), NewSeparator(), NewHSpacer(10))
+	authDialog := dialog.NewCustom("Выберите метод авторизации", "Отмена", authContainer, *h.parentWindow)
+	authBtn := widget.NewButton("Авторизация", func() { authDialog.Show() })
+	// ------------------------
 
 	profileLink, _ := h.headerLinks.GetLinkByName("profile")
 	profileHyperlink := widget.NewHyperlink("Профиль", h.headerLinks.GetUrlFromRawString(profileLink))
@@ -39,6 +49,8 @@ func (h *HeaderContent) Build() fyne.CanvasObject {
 
 	header := container.NewPadded(container.NewHBox(
 		headerAvatar,
+		NewWSpacer(55),
+		authBtn,
 		layout.NewSpacer(),
 		profileHyperlink,
 		crmHyperlink,

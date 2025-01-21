@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/widget"
-	"github.com/FoxEdit/YCHRenew/Utility"
 	"io"
 	"net/http"
 	"time"
@@ -30,8 +29,8 @@ func NewCardModel() *CardModel {
 
 }
 
-func GetAllCardsFromAccount() *auctionTableData {
-	client := Utility.GetClientInstance()
+func (c *CardModel) GetAllCardsFromAccount() *AuctionTableData {
+	client := NewAuthModel().GetAuthorizedClient()
 	req, _ := http.NewRequest("GET", "https://ych.commishes.com/account/index.json?page=1", nil)
 	response, ok := client.Do(req)
 
@@ -40,9 +39,11 @@ func GetAllCardsFromAccount() *auctionTableData {
 	}
 	defer response.Body.Close()
 
-	tableData := &auctionTableData{}
+	tableData := &AuctionTableData{}
 	responseData, _ := io.ReadAll(response.Body)
 	json.Unmarshal(responseData, tableData)
+
+	println(tableData.Pages)
 
 	return tableData
 }

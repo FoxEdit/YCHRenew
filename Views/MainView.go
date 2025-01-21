@@ -41,7 +41,7 @@ func (mw *MainWindow) SetUI() {
 }
 
 func (mw *MainWindow) buildUI() fyne.CanvasObject {
-	header := NewHeaderContent(mw.linkViewModel, mw.popupViewModel).Build()
+	header := NewHeaderContent(mw.linkViewModel, mw.popupViewModel, &mw.window).Build()
 
 	navFilter := NewNavigationFilter(mw.auctionTableViewModel).Build()
 	auctionTable := NewAuctionTable().Build()
