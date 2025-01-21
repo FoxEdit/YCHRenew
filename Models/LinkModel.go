@@ -8,7 +8,7 @@ func NewLinkModel() *LinkModel {
 	model := new(LinkModel)
 
 	model.urls = map[string]string{
-		"profile": "https://account.commishes.com/",
+		"profile": "https://ych.commishes.com/account/",
 		"crm":     "https://crm.commishes.com/",
 		"avatar":  "https://account.commishes.com/image/user/260366/64/?t=1736195748",
 	}
