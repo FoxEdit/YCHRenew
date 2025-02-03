@@ -6,35 +6,55 @@ import (
 	"github.com/FoxEdit/YCHRenew/Models"
 	"github.com/FoxEdit/YCHRenew/ViewModels"
 	"github.com/FoxEdit/YCHRenew/Views"
+	"io"
+	"log"
+	"os"
 )
 
 func main() {
 	// application
+	file, err := os.OpenFile("log.txt", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Println("Cannot open/create log file; console output only")
+	} else {
+		multiWriter := io.MultiWriter(os.Stdout, file)
+		log.SetOutput(multiWriter)
+		log.SetFlags(log.Ltime | log.Lshortfile)
+		defer file.Close()
+	}
+
+	log.Print("======================================== Application start ========================================")
 	mainApp := app.New()
-	//Models.NewAuthModel().CookieLogin()
-	//Models.NewCardModel().GetAllCardsFromAccount()
+	mainWindow := mainApp.NewWindow("YCHRenew")
 
 	// models
 	linkModel := Models.NewLinkModel()
-	popupModel := Models.NewPopupModel()
-	auctionTableModel := Models.NewAuctionTableModel()
+	authModel := Models.NewAuthModel()
+	filterModel := Models.NewFilterModel()
+	accountModel := Models.GetAccountModelInstance() // singleton model
 
 	// viewmodels
 	linkViewModel := ViewModels.NewLinkViewModel(linkModel)
-	popupViewModel := ViewModels.NewPopupViewModel(popupModel)
-	auctionTableViewModel := ViewModels.NewAuctionTableViewModel(auctionTableModel)
+	authViewModel := ViewModels.NewAuthViewModel(authModel)
+	accountViewModel := ViewModels.NewAccountViewModel(accountModel)
+	filterViewModel := ViewModels.NewFilterViewModel(filterModel, accountModel)
 
-	// setup
+	// setup viewmodels
 	v := Views.NewMainWindow(
-		mainApp.NewWindow("YCHRenew"),
-		fyne.Size{Width: 850, Height: 500},
+		mainWindow,
+		fyne.Size{Width: 1330, Height: 450},
 	)
 	v.SetupViewModels(
 		linkViewModel,
-		popupViewModel,
-		auctionTableViewModel,
+		authViewModel,
+		filterViewModel,
+		accountViewModel,
 	)
-	v.SetUI()
+	go v.SetUI()
+
+	// setup callbacks to rerender whole UI
+	authViewModel.SetUIRefreshCallback(v.SetUI)
+	filterViewModel.SetUIRefreshCallback(v.SetUI)
 
 	// main loop
 	v.ShowAndRun()

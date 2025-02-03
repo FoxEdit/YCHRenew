@@ -5,6 +5,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/storage"
 	"github.com/FoxEdit/YCHRenew/Models"
+	"log"
 	"net/url"
 )
 
@@ -19,7 +20,7 @@ func NewLinkViewModel(model *Models.LinkModel) *LinkViewModel {
 func (l *LinkViewModel) GetLinkByName(key string) (string, error) {
 	link, ok := l.model.GetLinks()[key]
 	if !ok {
-		fyne.LogError("link not found for key: "+key, errors.New("link not found"))
+		log.Println("LINK ERROR: LINK FOR", key, "NOT FOUND")
 		return "", errors.New("link not found")
 	}
 	return link, nil
