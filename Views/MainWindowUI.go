@@ -74,18 +74,25 @@ func (mw *MainWindow) SetUI() {
 	mw.window.SetContent(mw.buildUI(isDone))
 }
 
+func (mw *MainWindow) RefreshHeader() {
+}
+
+func (mw *MainWindow) RefreshCardTable() {
+
+}
+
 func (mw *MainWindow) buildUI(isDone chan<- bool) fyne.CanvasObject {
 	log.Println("MAIN WINDOW BUILD STARTED")
 	log.Println("BUILDING HEADER")
 	header := NewHeaderContent(mw.linkViewModel, mw.authViewModel, &mw.window).Build()
 
 	log.Println("BUILDING NAVIGATION FILTER")
-	navFilter := NewNavigationFilter(mw.filterTableViewModel).Build()
+	filter := NewNavigationFilter(mw.filterTableViewModel).Build()
 
 	log.Println("BUILDING AUCTION TABLE")
-	auctionTable := NewAuctionTable(mw.accountViewModel, mw.linkViewModel, mw.filterTableViewModel, &mw.window).Build()
+	cardTable := NewCardTable(mw.accountViewModel, mw.linkViewModel, mw.filterTableViewModel, &mw.window).Build()
 
-	content := container.NewHBox(navFilter, CustomUITools.NewSeparator(), auctionTable)
+	content := container.NewHBox(filter, CustomUITools.NewSeparator(), cardTable)
 
 	isDone <- true
 	return container.NewPadded(container.NewVBox(

@@ -1,7 +1,6 @@
 package Views
 
 import (
-	"fmt"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
@@ -12,6 +11,7 @@ import (
 	"github.com/FoxEdit/YCHRenew/ViewModels"
 	"github.com/FoxEdit/YCHRenew/Views/CustomUITools"
 	"image/color"
+	"log"
 )
 
 const (
@@ -46,7 +46,7 @@ func (h *Header) Build() fyne.CanvasObject {
 	crmLink, _ := h.linkViewModel.GetLinkByName("crm")
 	crmHyperlink := widget.NewHyperlink("CRM", h.linkViewModel.GetUrlFromRawString(crmLink))
 
-	createAuctionButton := widget.NewButton("Новый аукцион", func() { fmt.Print("TODO: new auc btn") })
+	createAuctionButton := widget.NewButton("Новый аукцион", func() { h.createNewAuctionDialog().Show() })
 
 	header := container.NewPadded(container.NewHBox(
 		headerAvatar,
@@ -61,10 +61,17 @@ func (h *Header) Build() fyne.CanvasObject {
 	return header
 }
 
+func (h *Header) afterAuthCallback() {
+
+}
+
 func (h *Header) createAuthChoicePopup() *widget.PopUpMenu {
 	authMenuItems := []*fyne.MenuItem{
 		fyne.NewMenuItem("Загрузить предыдущую сессию", func() {
-			h.authViewModel.GetLoadSessionButtonFunctional()()
+			err := h.authViewModel.LoadSessionButtonFunctional()
+			if err != nil {
+				dialog.NewInformation("Ошибка!", err.Error(), *h.parentWindow).Show()
+			}
 		}),
 		fyne.NewMenuItem("Новый вход", func() { h.createLoginDialog().Show() }),
 	}
@@ -72,6 +79,106 @@ func (h *Header) createAuthChoicePopup() *widget.PopUpMenu {
 	authChoicePopupMenu := widget.NewPopUpMenu(fyne.NewMenu("Вариант входа", authMenuItems...), (*h.parentWindow).Canvas())
 
 	return authChoicePopupMenu
+}
+
+// TODO use enums? separate arrays?
+func (h *Header) createNewAuctionDialog() *dialog.CustomDialog {
+	var auctionDialog *dialog.CustomDialog
+
+	categoryLabel := widget.NewLabel("Категория работы")
+	category := widget.NewRadioGroup([]string{
+		"Адопт",
+		"Фурри",
+		"Пони",
+		"Человек",
+		"Самоделка",
+	}, func(s string) {
+		log.Println(s, "CLICKED")
+	})
+	category.Required = true
+	category.Selected = "Адопт"
+
+	subtitleLabel := widget.NewLabel("Подзаголовок")
+	subtitle := widget.NewEntry()
+
+	titleLabel := widget.NewLabel("Заголовок")
+	title := widget.NewEntry()
+
+	descriptionLabel := widget.NewLabel("Описание")
+	descriptionEntry := widget.NewEntry()
+	description := container.NewStack(CustomUITools.NewHSpacer(200), descriptionEntry)
+
+	descriptionEntry.MultiLine = true
+	descriptionEntry.Wrapping = fyne.TextWrapWord
+
+	ageRestrictionsLabel := widget.NewLabel("Возрастные ограничения")
+	ageRestrictions := widget.NewRadioGroup([]string{
+		"Безопасный контент (S)",
+		"Сомнительный контент (Q)",
+		"Взрослый контент (E)",
+		"Шок-контент",
+	}, func(s string) {
+		log.Println(s, "CLICKED")
+	})
+	ageRestrictions.Required = true
+	ageRestrictions.Selected = "Безопасный контент (S)"
+
+	additionalOptionsLabel := widget.NewLabel("Дополнительные опции")
+	additionalOptions := widget.NewCheckGroup([]string{
+		"Доступен дополнительный NSFW контент",
+		"Запретить снайпинг ставки",
+	}, func(options []string) {
+		log.Println(options, "CLICKED")
+	})
+	additionalOptions.Horizontal = true
+
+	auctionDurationLabel := widget.NewLabel("Длительность аукциона")
+	auctionDuration := widget.NewRadioGroup([]string{
+		"24 часа",
+		"3 дня",
+		"7 дней",
+	}, func(s string) {
+		log.Println(s, "CLICKED")
+	})
+	auctionDuration.Required = true
+	auctionDuration.Selected = "24 часа"
+
+	postNewAuction := widget.NewButton("Запустить аукцион", func() {
+		log.Println("AUCTION RUN CLICKED")
+	})
+
+	auctionDialogContainer := container.NewStack(CustomUITools.NewHWSpacer(420, 625),
+		container.NewVScroll(
+			container.NewBorder(
+				nil,
+				nil,
+				nil,
+				CustomUITools.NewWSpacer(12),
+				container.NewVBox(
+					categoryLabel,
+					category,
+					CustomUITools.NewSeparator(),
+					subtitleLabel,
+					subtitle,
+					titleLabel,
+					title,
+					descriptionLabel,
+					description,
+					ageRestrictionsLabel,
+					ageRestrictions,
+					CustomUITools.NewSeparator(),
+					additionalOptionsLabel,
+					additionalOptions,
+					CustomUITools.NewSeparator(),
+					auctionDurationLabel,
+					auctionDuration,
+					CustomUITools.NewSeparator(),
+					postNewAuction,
+				))))
+
+	auctionDialog = dialog.NewCustom("Создание аукциона", "Отмена", auctionDialogContainer, *h.parentWindow)
+
+	return auctionDialog
 }
 
 func (h *Header) createLoginDialog() *dialog.CustomDialog {
@@ -87,8 +194,11 @@ func (h *Header) createLoginDialog() *dialog.CustomDialog {
 		CustomUITools.NewSeparator(),
 		CustomUITools.NewHSpacer(10.0),
 		widget.NewButton("Войти", func() {
-			h.authViewModel.GetLoginButtonFunctional()(login.Text, password.Text)
+			err := h.authViewModel.LoginButtonFunctional(login.Text, password.Text)
 			authChoiceDialog.Hide()
+			if err != nil {
+				dialog.NewInformation("Ошибка!", err.Error(), *h.parentWindow).Show()
+			}
 		}),
 	)
 
