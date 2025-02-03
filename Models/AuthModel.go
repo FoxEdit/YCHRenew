@@ -2,6 +2,7 @@ package Models
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"log"
 	"mime/multipart"
@@ -9,10 +10,7 @@ import (
 	"strings"
 )
 
-type AuthModel struct {
-	login    string
-	password string
-}
+type AuthModel struct{}
 
 func NewAuthModel() *AuthModel {
 	return &AuthModel{}
@@ -20,12 +18,29 @@ func NewAuthModel() *AuthModel {
 
 func (am *AuthModel) CookieLogin() error {
 	log.Println("COOKIE LOGIN")
-	return getWebClientInstance().loadCookies()
+	client := getWebClientInstance()
+	if client.isAuthenticated {
+		log.Println("ALREADY LOGGED IN")
+		return errors.New("already logged in")
+	}
+
+	cookies := NewFileModel().ReadAuthCacheFromStorage()
+	client.client.Jar.SetCookies(client.ychCommishesURL, cookies)
+
+	if isLoggedIn() {
+		client.isAuthenticated = true
+		return nil
+	}
+
+	return errors.New("cookie authorization failure")
 }
 
 func (am *AuthModel) Login(login string, password string) error {
-	log.Println("DEFAULT LOGIN")
+	log.Println("DEFAULT LOGIN: ")
 	client := getWebClientInstance()
+	if client.isAuthenticated {
+		return errors.New("already logged in")
+	}
 
 	loginRequest, _ := http.NewRequest("GET", "https://account.commishes.com/user/login/", nil)
 	loginResponse, _ := client.Do(loginRequest)
@@ -54,10 +69,26 @@ func (am *AuthModel) Login(login string, password string) error {
 	getCookiesRequest, _ := http.NewRequest("GET", "https://ych.commishes.com/account/", &body)
 	client.Do(getCookiesRequest)
 
-	client.saveCookies()
-	client.isAuthenticated = true
+	if isLoggedIn() {
+		client.saveCookies()
+		client.isAuthenticated = true
+		return nil
+	}
 
-	return nil // todo check if login success or not
+	log.Println("DEFAULT LOGIN FAILRUE")
+	return errors.New("default authorization failure")
+}
+
+func isLoggedIn() bool {
+	req, _ := http.NewRequest("GET", COMMISHES_URL+"/account.json", nil)
+	client := getWebClientInstance()
+	res, _ := client.Do(req)
+
+	finalURL := res.Request.URL.String()
+
+	return finalURL == COMMISHES_URL+"/account.json"
+
+	//return res.StatusCode == 200
 }
 
 func (am *AuthModel) Register(login string, password string, email string) {

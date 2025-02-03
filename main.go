@@ -42,7 +42,7 @@ func main() {
 	// setup viewmodels
 	v := Views.NewMainWindow(
 		mainWindow,
-		fyne.Size{Width: 1330, Height: 450},
+		fyne.Size{Width: 1347, Height: 540},
 	)
 	v.SetupViewModels(
 		linkViewModel,

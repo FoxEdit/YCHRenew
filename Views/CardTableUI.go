@@ -23,13 +23,13 @@ type CardTable struct {
 	accountViewModel *ViewModels.AccountViewModel
 }
 
-func NewAuctionTable(accountVM *ViewModels.AccountViewModel, links *ViewModels.LinkViewModel, filter *ViewModels.FilterViewModel, parentWindow *fyne.Window) *CardTable {
+func NewCardTable(accountVM *ViewModels.AccountViewModel, links *ViewModels.LinkViewModel, filter *ViewModels.FilterViewModel, parentWindow *fyne.Window) *CardTable {
 	return &CardTable{accountViewModel: accountVM, links: links, filter: filter, parentWindow: parentWindow}
 }
 
 func (a *CardTable) Build() fyne.CanvasObject {
 	log.Println("CARD TABLE BUILD START")
-	content := container.NewVBox()
+	contentContainer := container.NewVBox()
 	log.Println("LOADING CACHE")
 	a.accountViewModel.LoadCachedAccountData()
 
@@ -42,13 +42,20 @@ func (a *CardTable) Build() fyne.CanvasObject {
 
 	cleanedCards := a.accountViewModel.GetAllCleaned()
 
+	if len(cleanedCards) == 0 {
+		return contentContainer // return without scroll background
+	}
+
 	for i := range cleanedCards {
 		data := &cleanedCards[i]
 		card := a.CreateCard(data)
 
 		a.filter.AddNewCard(&ViewModels.CardItem{Data: data, Card: card})
-		content.Add(card)
+		contentContainer.Add(card)
 	}
+
+	content := container.NewBorder(nil, nil, nil,
+		CustomUITools.NewColorWSpacer(12, theme.Color(theme.ColorNameButton)), contentContainer)
 
 	return container.NewVScroll(content)
 }

@@ -29,6 +29,7 @@ func createWebClientInstance() {
 	ychCommishesURL, _ := url.Parse(COMMISHES_URL)
 	jar, _ := cookiejar.New(nil)
 	instance = &WebClient{ychCommishesURL: ychCommishesURL, client: http.Client{Jar: jar}}
+	instance.isAuthenticated = false
 
 	log.Println("CLIENT CREATED")
 }
@@ -37,17 +38,6 @@ func (n *WebClient) saveCookies() {
 	fileModel := NewFileModel()
 	cookiesArr := n.client.Jar.Cookies(n.ychCommishesURL)
 	fileModel.WriteAuthCacheToStorage(cookiesArr)
-}
-
-func (n *WebClient) loadCookies() error {
-	fileModel := NewFileModel()
-
-	cookies := fileModel.ReadAuthCacheFromStorage()
-
-	n.client.Jar.SetCookies(n.ychCommishesURL, cookies)
-	n.isAuthenticated = true
-
-	return nil
 }
 
 func (n *WebClient) PrintCookies() {
