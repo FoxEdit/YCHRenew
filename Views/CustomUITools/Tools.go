@@ -1,4 +1,4 @@
-package Views
+package CustomUITools
 
 import (
 	"fyne.io/fyne/v2"
