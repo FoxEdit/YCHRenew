@@ -15,19 +15,20 @@ const appAuthCache = "auth_cache"
 
 const cookieFile = "data.dat"
 
+// TODO: add popups when error occured
 type FileModel struct {
 }
 
 func NewFileModel() *FileModel {
-	return new(FileModel)
+	return &FileModel{}
 }
 
-func (f FileModel) WriteAuthCacheToStorage(cookies []*http.Cookie) {
+func (f FileModel) WriteAuthCacheToStorage(cookies []*http.Cookie) error {
 	if !f.isCookieFileExists() {
 		err := f.prepareCookieFolder()
 		if err != nil {
-			log.Println("COOKIE PREPARING FOLDER FAILED: ", err.Error()) // refactor to log + popup
-			return
+			log.Println("COOKIE PREPARING FOLDER FAILED: ", err.Error()) // add popup
+			return errors.New("cookie preparing folder failed")
 		}
 	}
 
@@ -39,16 +40,18 @@ func (f FileModel) WriteAuthCacheToStorage(cookies []*http.Cookie) {
 	appdata, _ := os.UserConfigDir()
 	file, err := os.OpenFile(appdata+"\\"+appFolder+"\\"+appAuthCache+"\\"+cookieFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		log.Println("COOKIE OPEN ERROR: ", err.Error()) // add popup
-		return
+		log.Println("COOKIE OPEN ERROR: ", err.Error())
+		return errors.New("cookie open error")
 	}
 	defer file.Close()
 
 	err = os.WriteFile(file.Name(), []byte(cookiesStr), 0644)
 	if err != nil {
-		log.Println("COOKIE WRITE ERROR: ", err.Error()) // add popup
-		return
+		log.Println("COOKIE WRITE ERROR: ", err.Error())
+		return errors.New("cookie write error")
 	}
+
+	return nil
 }
 
 func (f FileModel) isCookieFileExists() bool {
@@ -70,41 +73,51 @@ func (f FileModel) prepareCookieFolder() error {
 
 	appData, _ := os.UserConfigDir()
 	appFolderPath := appData + "\\" + appFolder
-	cookiePath := appFolderPath + "\\" + appAuthCache + "\\" + cookieFile
+	cookieFolderPath := appFolderPath + "\\" + appAuthCache
+	cookiePath := cookieFolderPath + "\\" + cookieFile
 
 	_, appFolderErr := os.Stat(appFolderPath)
-	_, fileErr := os.Stat(cookiePath)
+	_, cookieFolderErr := os.Stat(cookieFolderPath)
+	_, cookieFileErr := os.Stat(cookiePath)
 
 	if appFolderErr != nil {
 		err := os.Mkdir(appFolderPath, 0777)
 		if !errors.Is(err, fs.ErrExist) {
-			log.Println("DIR ERROR: ", err.Error()) // refactor to log + popup
+			log.Println("DIR ERROR: ", err.Error())
 			return err
 		}
 	}
 
-	if fileErr != nil {
+	if cookieFolderErr != nil {
+		err := os.Mkdir(appFolderPath, 0777)
+		if !errors.Is(err, fs.ErrExist) {
+			log.Println("COOKIE DIR ERROR: ", err.Error())
+			return err
+		}
+	}
+
+	if cookieFileErr != nil {
 		file, err := os.OpenFile(cookiePath, os.O_CREATE, 0644)
 		defer file.Close()
 		if err != nil {
-			log.Println("FILE CREATE ERROR: ", err.Error()) // refactor to log + popup
+			log.Println("FILE CREATE ERROR: ", err.Error())
 			return err
 		}
 	}
-
 	return nil
 }
 
-func (f FileModel) ReadAuthCacheFromStorage() []*http.Cookie {
+func (f FileModel) ReadAuthCacheFromStorage() ([]*http.Cookie, error) {
 	appdataPath, _ := os.UserConfigDir()
 	appFolderPath := appdataPath + "\\" + appFolder + "\\" + appAuthCache
 	cookiePath := appFolderPath + "\\" + cookieFile
 
 	file, err := os.Open(cookiePath)
-	defer file.Close()
 	if err != nil {
 		log.Println("error opening cookie file: ", err)
+		return nil, err
 	}
+	defer file.Close()
 
 	var cookiesArr []*http.Cookie
 	scanner := bufio.NewScanner(file)
@@ -116,11 +129,13 @@ func (f FileModel) ReadAuthCacheFromStorage() []*http.Cookie {
 
 	if err := scanner.Err(); err != nil {
 		log.Println("error scanning cookie file: ", err)
+		return nil, err
 	}
 
 	if len(cookiesArr) == 0 {
 		log.Println("empty cookie error")
+		return nil, err
 	}
 
-	return cookiesArr
+	return cookiesArr, nil
 }

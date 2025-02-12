@@ -32,11 +32,13 @@ func main() {
 	authModel := Models.NewAuthModel()
 	filterModel := Models.NewFilterModel()
 	accountModel := Models.GetAccountModelInstance() // singleton model
+	auctionModel := Models.NewAuctionModel()
 
 	// viewmodels
 	linkViewModel := ViewModels.NewLinkViewModel(linkModel)
 	authViewModel := ViewModels.NewAuthViewModel(authModel)
 	accountViewModel := ViewModels.NewAccountViewModel(accountModel)
+	auctionViewModel := ViewModels.NewAuctionViewModel(auctionModel)
 	filterViewModel := ViewModels.NewFilterViewModel(filterModel, accountModel)
 
 	// setup viewmodels
@@ -49,6 +51,7 @@ func main() {
 		authViewModel,
 		filterViewModel,
 		accountViewModel,
+		auctionViewModel,
 	)
 	go v.SetUI()
 

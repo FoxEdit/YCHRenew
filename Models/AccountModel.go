@@ -62,6 +62,7 @@ type AccountPayloadJson struct {
 	Crm      interface{} `json:"crm"`
 	Reports  bool        `json:"reports"`
 }
+
 type AccountGeneralJson struct {
 	Result  string               `json:"result"`
 	Time    int                  `json:"time"`

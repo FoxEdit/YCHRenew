@@ -15,6 +15,7 @@ type MainWindow struct {
 	window fyne.Window
 
 	accountViewModel     *ViewModels.AccountViewModel
+	auctionViewModel     *ViewModels.AuctionViewModel
 	linkViewModel        *ViewModels.LinkViewModel
 	authViewModel        *ViewModels.AuthViewModel
 	filterTableViewModel *ViewModels.FilterViewModel
@@ -36,7 +37,9 @@ func (mw *MainWindow) SetupViewModels(
 	linkViewModel *ViewModels.LinkViewModel,
 	authViewModel *ViewModels.AuthViewModel,
 	auctionTableViewModel *ViewModels.FilterViewModel,
-	accountViewModel *ViewModels.AccountViewModel) {
+	accountViewModel *ViewModels.AccountViewModel,
+	auctionViewModel *ViewModels.AuctionViewModel) {
+	mw.auctionViewModel = auctionViewModel
 	mw.accountViewModel = accountViewModel
 	mw.linkViewModel = linkViewModel
 	mw.filterTableViewModel = auctionTableViewModel
@@ -90,7 +93,7 @@ func (mw *MainWindow) buildUI(isDone chan<- bool) fyne.CanvasObject {
 	filter := NewNavigationFilter(mw.filterTableViewModel).Build()
 
 	log.Println("BUILDING AUCTION TABLE")
-	cardTable := NewCardTable(mw.accountViewModel, mw.linkViewModel, mw.filterTableViewModel, &mw.window).Build()
+	cardTable := NewCardTable(mw.accountViewModel, mw.auctionViewModel, mw.linkViewModel, mw.filterTableViewModel, &mw.window).Build()
 
 	content := container.NewHBox(filter, CustomUITools.NewSeparator(), cardTable)
 
