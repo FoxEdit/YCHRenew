@@ -1,7 +1,6 @@
 package Views
 
 import (
-	"fmt"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
@@ -9,6 +8,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/FoxEdit/YCHRenew/ViewModels"
 	"github.com/FoxEdit/YCHRenew/Views/CustomUITools"
+	"log"
 )
 
 type Filter struct {
@@ -32,14 +32,14 @@ func (n *Filter) Build() fyne.CanvasObject {
 
 	auctionLabel := widget.NewLabel("Показывать только")
 	auctionRadioGroup := widget.NewRadioGroup([]string{"Все аукционы", "Активные аукционы", "Прошедшие аукционы"}, func(s string) {
-		fmt.Println(s)
+		log.Println(s, "CLICKED")
 	})
 	auctionRadioGroup.SetSelected("Все аукционы")
 	auctionRadioGroup.Required = true
 
 	sortLabel := widget.NewLabel("Сортировать как")
 	sortRadioGroup := widget.NewRadioGroup([]string{"Сначала новые", "Сначала старые", "Сначала со ставкой", "Сначала без ставки"}, func(s string) {
-		fmt.Println(s)
+		log.Println(s, "CLICKED")
 	})
 	sortRadioGroup.SetSelected("Сначала новые")
 	sortRadioGroup.Required = true

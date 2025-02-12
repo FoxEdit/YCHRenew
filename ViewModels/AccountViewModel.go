@@ -52,15 +52,15 @@ func (c *AccountViewModel) GetAllCleaned() []CleanAccountData {
 
 	for _, i := range c.data.Payload {
 		cleaned = append(cleaned, CleanAccountData{
-			i.AltThumb,
-			i.Title,
-			i.Subtitle,
-			i.Ends,
-			i.Endsunix,
-			i.EndsRel,
-			i.Heat,
-			i.Bid,
-			i.Url,
+			ImgUrl:   i.AltThumb,
+			Title:    i.Title,
+			Subtitle: i.Subtitle,
+			Ends:     i.Ends,
+			EndsUnix: i.Endsunix,
+			EndsIn:   i.EndsRel,
+			Heat:     i.Heat,
+			Bid:      i.Bid,
+			CardUrl:  i.Url,
 		})
 	}
 

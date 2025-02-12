@@ -3,11 +3,9 @@ package Models
 import (
 	"bytes"
 	"errors"
-	"io"
 	"log"
 	"mime/multipart"
 	"net/http"
-	"strings"
 )
 
 type AuthModel struct{}
@@ -24,10 +22,10 @@ func (am *AuthModel) CookieLogin() error {
 		return errors.New("already logged in")
 	}
 
-	cookies := NewFileModel().ReadAuthCacheFromStorage()
+	cookies, _ := NewFileModel().ReadAuthCacheFromStorage()
 	client.client.Jar.SetCookies(client.ychCommishesURL, cookies)
 
-	if isLoggedIn() {
+	if am.isLoggedIn() {
 		client.isAuthenticated = true
 		return nil
 	}
@@ -42,16 +40,10 @@ func (am *AuthModel) Login(login string, password string) error {
 		return errors.New("already logged in")
 	}
 
-	loginRequest, _ := http.NewRequest("GET", "https://account.commishes.com/user/login/", nil)
-	loginResponse, _ := client.Do(loginRequest)
-	loginResponseByte, _ := io.ReadAll(loginResponse.Body)
-	loginResponseString := string(loginResponseByte)
-
-	xsrfPattern := "name=\"_xsrf_\"   value=\""
-	xsrfStart := strings.Index(loginResponseString, xsrfPattern) + len(xsrfPattern)
-	xsrfEnd := strings.Index(loginResponseString[xsrfStart:], "\" />")
-	xsrf := loginResponseString[xsrfStart : xsrfStart+xsrfEnd]
-	defer loginResponse.Body.Close()
+	xsrf := client.GetXSRFByPattern(
+		"https://account.commishes.com/user/login/",
+		"name=\"_xsrf_\"   value=\"",
+		"\" />")
 
 	var body bytes.Buffer
 	multipartWriter := multipart.NewWriter(&body)
@@ -66,10 +58,10 @@ func (am *AuthModel) Login(login string, password string) error {
 	loginPostReq.Header.Set("Content-Type", multipartWriter.FormDataContentType())
 	client.Do(loginPostReq)
 
-	getCookiesRequest, _ := http.NewRequest("GET", "https://ych.commishes.com/account/", &body)
+	getCookiesRequest, _ := http.NewRequest("GET", COMMISHES_URL+"/account/", &body)
 	client.Do(getCookiesRequest)
 
-	if isLoggedIn() {
+	if am.isLoggedIn() {
 		client.saveCookies()
 		client.isAuthenticated = true
 		return nil
@@ -79,7 +71,7 @@ func (am *AuthModel) Login(login string, password string) error {
 	return errors.New("default authorization failure")
 }
 
-func isLoggedIn() bool {
+func (am *AuthModel) isLoggedIn() bool {
 	req, _ := http.NewRequest("GET", COMMISHES_URL+"/account.json", nil)
 	client := getWebClientInstance()
 	res, _ := client.Do(req)
@@ -87,10 +79,4 @@ func isLoggedIn() bool {
 	finalURL := res.Request.URL.String()
 
 	return finalURL == COMMISHES_URL+"/account.json"
-
-	//return res.StatusCode == 200
-}
-
-func (am *AuthModel) Register(login string, password string, email string) {
-	panic("implement me")
 }

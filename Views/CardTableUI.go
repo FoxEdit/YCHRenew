@@ -21,10 +21,11 @@ type CardTable struct {
 	links            *ViewModels.LinkViewModel
 	filter           *ViewModels.FilterViewModel
 	accountViewModel *ViewModels.AccountViewModel
+	auctionViewModel *ViewModels.AuctionViewModel
 }
 
-func NewCardTable(accountVM *ViewModels.AccountViewModel, links *ViewModels.LinkViewModel, filter *ViewModels.FilterViewModel, parentWindow *fyne.Window) *CardTable {
-	return &CardTable{accountViewModel: accountVM, links: links, filter: filter, parentWindow: parentWindow}
+func NewCardTable(accountVM *ViewModels.AccountViewModel, auctionViewModel *ViewModels.AuctionViewModel, links *ViewModels.LinkViewModel, filter *ViewModels.FilterViewModel, parentWindow *fyne.Window) *CardTable {
+	return &CardTable{accountViewModel: accountVM, auctionViewModel: auctionViewModel, links: links, filter: filter, parentWindow: parentWindow}
 }
 
 func (a *CardTable) Build() fyne.CanvasObject {
@@ -171,7 +172,42 @@ func (a *CardTable) cardFunctionality(cleanedData *ViewModels.CleanAccountData) 
 
 	menuOptions := []*fyne.MenuItem{
 		fyne.NewMenuItem("Рестарт без изменений", func() {
-			dialog.NewInformation("Ошибка!", "Функция пока не реализована.", *a.parentWindow).Show()
+			var selectDialog *dialog.CustomDialog
+
+			var auctionCategory string
+			auctionCategorySelect := widget.NewSelect([]string{
+				"Фурри",
+				"Люди",
+				"Адопты",
+				"Пони",
+				"Самоделки",
+			}, func(s string) {
+				auctionCategory = s
+			})
+			auctionCategorySelect.PlaceHolder = "-- Категория --"
+
+			var auctionTime string
+			auctionTimeSelect := widget.NewSelect([]string{
+				"24 часа",
+				"3 дня",
+				"7 дней",
+			}, func(s string) {
+				auctionTime = s
+			})
+			auctionTimeSelect.PlaceHolder = "-- Длительность аукциона --"
+
+			submitBtn := widget.NewButton("Подтвердить", func() {
+				a.auctionViewModel.RenewAuction(cleanedData.CardUrl, auctionCategory, auctionTime)
+				selectDialog.Hide()
+			})
+
+			content := container.NewVBox(
+				auctionCategorySelect,
+				auctionTimeSelect,
+				submitBtn)
+
+			selectDialog = dialog.NewCustom("Рестарт аукциона без изменений", "Отмена", content, *a.parentWindow)
+			selectDialog.Show()
 		}),
 		fyne.NewMenuItem("Рестарт c изменениями", func() {
 			dialog.NewInformation("Ошибка!", "Функция пока не реализована.", *a.parentWindow).Show()
