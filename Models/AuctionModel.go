@@ -29,20 +29,19 @@ type Slot struct {
 }
 
 // cutted ver
-type Payload struct {
+type AuctionPayload struct {
 	Id          int             `json:"id"`
 	Title       string          `json:"title"`
 	Subtitle    string          `json:"subtitle"`
 	Description string          `json:"description"`
 	Rating      int             `json:"rating"`
-	Adult       bool            `json:"adult"`
 	Media       Media           `json:"media"`
 	Slots       map[string]Slot `json:"slots"`
 }
 
 // cutted ver
 type AuctionCardGeneralJson struct {
-	Payload Payload `json:"payload"`
+	Payload AuctionPayload `json:"payload"`
 }
 
 type AuctionModel struct {
@@ -66,14 +65,6 @@ func (a *AuctionModel) RestartAuctionAsIs(cardUrl string, auctionCategory string
 		return
 	}
 
-	auctionPostXsrf := client.GetXSRFByPattern(
-		COMMISHES_URL+"/auction/create/",
-		"\"csrf\":\"",
-		"\",\"")
-
-	var requestBody bytes.Buffer
-	multipartWriter := multipart.NewWriter(&requestBody)
-
 	auctionFileRequest, _ := http.NewRequest("GET", data.Payload.Media.Original, nil)
 	auctionFileResponse, _ := client.Do(auctionFileRequest)
 	auctionFile, err := io.ReadAll(auctionFileResponse.Body)
@@ -83,29 +74,57 @@ func (a *AuctionModel) RestartAuctionAsIs(cardUrl string, auctionCategory string
 	}
 	defer auctionFileResponse.Body.Close()
 
-	multipartWriter.WriteField("csrf", auctionPostXsrf)
-
-	fileField := make(textproto.MIMEHeader)
-	fileField.Set("Content-Disposition", "form-data; name=\"file\"; filename=\"Illustration.json\"")
-	fileField.Set("Content-Type", "image/jpeg")
-	filePart, _ := multipartWriter.CreatePart(fileField)
-	filePart.Write(auctionFile)
-
-	multipartWriter.WriteField("category", auctionCategory)
-	multipartWriter.WriteField("subtitle", data.Payload.Subtitle)
-	multipartWriter.WriteField("title", data.Payload.Title)
-	multipartWriter.WriteField("description", data.Payload.Description)
-	multipartWriter.WriteField("rating", strconv.Itoa(data.Payload.Rating))
-
-	multipartWriter.Close()
+	var requestBody bytes.Buffer
+	boundary := a.createMultipart(&requestBody, auctionFile, auctionCategory, data)
 
 	newAuctionSubmitMainDataRequest, _ := http.NewRequest("POST", COMMISHES_URL+"/auction/create.json", &requestBody)
-	newAuctionSubmitMainDataRequest.Header.Set("Content-Type", multipartWriter.FormDataContentType())
+	newAuctionSubmitMainDataRequest.Header.Set("Content-Type", "multipart/form-data; boundary="+boundary)
 	newAuctionSubmitMainDataResponse, _ := client.Do(newAuctionSubmitMainDataRequest)
 
-	if newAuctionSubmitMainDataResponse.StatusCode != http.StatusOK {
+	newAuctionId, _ := a.getCreatedAuctionId(newAuctionSubmitMainDataResponse)
+
+	a.processNewAuctionDurationSet(auctionTime, newAuctionId)
+	a.processNewAuctionPriceSet(data, newAuctionId)
+}
+
+func (a *AuctionModel) processNewAuctionPriceSet(data *AuctionCardGeneralJson, auctionId string) {
+	client := getWebClientInstance()
+
+	pricesFormData := url.Values{
+		"startingbid":    {strconv.Itoa(data.Payload.Slots[strconv.Itoa(data.Payload.Id)].Startbid)},
+		"minincrease":    {strconv.Itoa(data.Payload.Slots[strconv.Itoa(data.Payload.Id)].Minincrease)},
+		"autobuyenabled": {"on"},
+		"autobuy":        {strconv.Itoa(data.Payload.Slots[strconv.Itoa(data.Payload.Id)].Autobuy)},
+	}
+
+	newAuctionSubmitPriceRequest, _ := http.NewRequest(
+		"POST",
+		fmt.Sprintf("%s/auction/ready/%s/", COMMISHES_URL, auctionId),
+		strings.NewReader(pricesFormData.Encode()),
+	)
+	newAuctionSubmitPriceRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	client.Do(newAuctionSubmitPriceRequest)
+}
+
+func (a *AuctionModel) processNewAuctionDurationSet(duration string, auctionId string) {
+	client := getWebClientInstance()
+
+	newAuctionSubmitDurationFormData := url.Values{
+		"duration": {duration},
+	}
+	newAuctionSubmitDurationRequest, _ := http.NewRequest(
+		"POST",
+		fmt.Sprintf("%s/auction/start/%s/?result=ok/", COMMISHES_URL, auctionId),
+		strings.NewReader(newAuctionSubmitDurationFormData.Encode()),
+	)
+	newAuctionSubmitDurationRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	client.Do(newAuctionSubmitDurationRequest)
+}
+
+func (a *AuctionModel) getCreatedAuctionId(auctionSubmitResponse *http.Response) (string, error) {
+	if auctionSubmitResponse.StatusCode != http.StatusOK {
 		log.Println("FIRST STEP OF POST ERROR")
-		return
+		return "", errors.New("first step of post error")
 	}
 
 	processAuctionPayload := struct {
@@ -115,12 +134,13 @@ func (a *AuctionModel) RestartAuctionAsIs(cardUrl string, auctionCategory string
 			Redirect  string      `json:"redirect"`
 		} `json:"payload"`
 	}{}
-	newAuctionSubmitMainDataProcessResponseStr, _ := io.ReadAll(newAuctionSubmitMainDataResponse.Body)
-	err = json.Unmarshal(newAuctionSubmitMainDataProcessResponseStr, &processAuctionPayload)
+
+	newAuctionSubmitMainDataProcessResponseStr, _ := io.ReadAll(auctionSubmitResponse.Body)
+	err := json.Unmarshal(newAuctionSubmitMainDataProcessResponseStr, &processAuctionPayload)
 
 	if err != nil {
 		log.Println("SECOND STEP OF POST ERROR:", err.Error(), processAuctionPayload.Payload.Message)
-		return
+		return "", errors.New("second step of post error")
 	}
 
 	redirectParts := strings.Split(processAuctionPayload.Payload.Redirect, "/")
@@ -131,37 +151,36 @@ func (a *AuctionModel) RestartAuctionAsIs(cardUrl string, auctionCategory string
 		}
 	}
 
-	newAuctionSubmitDurationFormData := url.Values{
-		"duration": {auctionTime},
-	}
-	newAuctionSubmitDurationRequest, _ := http.NewRequest(
-		"POST",
-		fmt.Sprintf("%s/auction/start/%s/?result=ok/", COMMISHES_URL, newAuctionId),
-		strings.NewReader(newAuctionSubmitDurationFormData.Encode()),
-	)
-	newAuctionSubmitDurationRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	durationRequest, _ := client.Do(newAuctionSubmitDurationRequest)
-	fmt.Println(durationRequest.StatusCode)
-	reqAnsw, _ := io.ReadAll(durationRequest.Body)
-	fmt.Println(string(reqAnsw))
+	return newAuctionId, nil
+}
 
-	newAuctionSubmitPricesFormData := url.Values{
-		"startingbid":    {strconv.Itoa(data.Payload.Slots[strconv.Itoa(data.Payload.Id)].Startbid)},
-		"minincrease":    {strconv.Itoa(data.Payload.Slots[strconv.Itoa(data.Payload.Id)].Minincrease)},
-		"autobuyenabled": {"on"},
-		"autobuy":        {strconv.Itoa(data.Payload.Slots[strconv.Itoa(data.Payload.Id)].Autobuy)},
-	}
+// returns boundary
+func (a *AuctionModel) createMultipart(requestBody *bytes.Buffer, auctionImage []byte, auctionCategory string, data *AuctionCardGeneralJson) string {
+	client := getWebClientInstance()
+	multipartWriter := multipart.NewWriter(requestBody)
 
-	newAuctionSubmitPriceRequest, _ := http.NewRequest(
-		"POST",
-		fmt.Sprintf("%s/auction/ready/%s/", COMMISHES_URL, newAuctionId),
-		strings.NewReader(newAuctionSubmitPricesFormData.Encode()),
-	)
-	newAuctionSubmitPriceRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	priceRequest, _ := client.Do(newAuctionSubmitPriceRequest)
-	fmt.Println(priceRequest.StatusCode)
-	priceAnsw, _ := io.ReadAll(priceRequest.Body)
-	fmt.Println(string(priceAnsw))
+	auctionPostXsrf := client.GetXSRFByPattern(
+		COMMISHES_URL+"/auction/create/",
+		"\"csrf\":\"",
+		"\",\"")
+
+	multipartWriter.WriteField("csrf", auctionPostXsrf)
+
+	fileField := make(textproto.MIMEHeader)
+	fileField.Set("Content-Disposition", "form-data; name=\"file\"; filename=\"Illustration\"")
+	fileField.Set("Content-Type", "image/png")
+	filePart, _ := multipartWriter.CreatePart(fileField)
+	filePart.Write(auctionImage)
+
+	multipartWriter.WriteField("category", auctionCategory)
+	multipartWriter.WriteField("subtitle", data.Payload.Subtitle)
+	multipartWriter.WriteField("title", data.Payload.Title)
+	multipartWriter.WriteField("description", data.Payload.Description)
+	multipartWriter.WriteField("rating", strconv.Itoa(data.Payload.Rating))
+
+	multipartWriter.Close()
+
+	return multipartWriter.Boundary()
 }
 
 func (a *AuctionModel) RestartAuctionWithChanges() {
