@@ -8,10 +8,18 @@ import (
 	"github.com/FoxEdit/YCHRenew/Views"
 	"io"
 	"log"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 )
 
 func main() {
+	go func() {
+		if err := http.ListenAndServe("localhost:6060", nil); err != nil {
+			log.Fatal("Pprof server error:", err)
+		}
+	}()
+
 	// application
 	file, err := os.OpenFile("log.txt", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {

@@ -98,6 +98,7 @@ func (mw *MainWindow) buildUI(isDone chan<- bool) fyne.CanvasObject {
 	content := container.NewHBox(filter, CustomUITools.NewSeparator(), cardTable)
 
 	isDone <- true
+	close(isDone)
 	return container.NewPadded(container.NewVBox(
 		header,
 		CustomUITools.NewHSpacer(2.5),

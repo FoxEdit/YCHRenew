@@ -114,9 +114,6 @@ func (a *CardTable) getCardImage(cleanedData *ViewModels.CleanAccountData) fyne.
 	img.FillMode = canvas.ImageFillContain
 	img.SetMinSize(fyne.NewSize(80, 80))
 
-	c := container.NewStack(img)
-	c.Add(img)
-
 	return img
 }
 
