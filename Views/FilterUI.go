@@ -13,7 +13,7 @@ import (
 
 type Filter struct {
 	navigationFilterViewModel *ViewModels.FilterViewModel
-	cardViewModel             *ViewModels.AccountViewModel
+	//cardViewModel             *ViewModels.AccountViewModel
 	searchBar                 *widget.Entry
 }
 
@@ -24,7 +24,8 @@ func NewNavigationFilter(avm *ViewModels.FilterViewModel) *Filter {
 	}
 }
 
-func (n *Filter) Build() fyne.CanvasObject {
+func (n *Filter) Build() *fyne.Container {
+	log.Println("STARTED BUILDING FILTER VIEW")
 	background := canvas.NewRectangle(theme.Color("background")) //(color.RGBA{R: 44, G: 44, B: 46, A: 0})
 	background.SetMinSize(fyne.NewSize(200, 460))
 

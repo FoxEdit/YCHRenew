@@ -20,7 +20,7 @@ func main() {
 		}
 	}()
 
-	// application
+	// logs
 	file, err := os.OpenFile("log.txt", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		log.Println("Cannot open/create log file; console output only")
@@ -31,6 +31,7 @@ func main() {
 		defer file.Close()
 	}
 
+	// application
 	log.Print("======================================== Application start ========================================")
 	mainApp := app.New()
 	mainWindow := mainApp.NewWindow("YCHRenew")
@@ -61,11 +62,14 @@ func main() {
 		accountViewModel,
 		auctionViewModel,
 	)
-	go v.SetUI()
+	go v.ProcessNewUI()
 
 	// setup callbacks to rerender whole UI
-	authViewModel.SetUIRefreshCallback(v.SetUI)
-	filterViewModel.SetUIRefreshCallback(v.SetUI)
+	authViewModel.SetUIRefreshCallback(func(){
+		v.RebuildHeader()
+		v.RebuildAuctionContent()
+	})
+	filterViewModel.SetUIRefreshCallback(v.RebuildAuctionContent)
 
 	// main loop
 	v.ShowAndRun()

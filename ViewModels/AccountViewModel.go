@@ -32,7 +32,7 @@ func (c *AccountViewModel) UpdateDataFromAccount() {
 		log.Println("FETCH DATA ERROR")
 	}
 
-	c.data = c.accountModel.GetData(1)
+	c.LoadCachedAccountData()
 }
 
 func (c *AccountViewModel) LoadCachedAccountData() {
@@ -47,7 +47,7 @@ func (c *AccountViewModel) GetAllCleaned() []CleanAccountData {
 	cleaned := make([]CleanAccountData, 0)
 
 	if c.data == nil {
-		return cleaned
+		return nil
 	}
 
 	for _, i := range c.data.Payload {

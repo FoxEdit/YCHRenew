@@ -1,6 +1,8 @@
 package ViewModels
 
 import (
+	"log"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/data/binding"
 	"github.com/FoxEdit/YCHRenew/Models"
@@ -44,6 +46,8 @@ func NewFilterViewModel(filterModel *Models.FilterModel, accountModel *Models.Ac
 }
 
 func (f *FilterViewModel) UpdateAuctionTableList() {
+	log.Println("CLEAN FILTER_CARDS AND UPDATE AUCTION TABLE LIST")
+	f.cards = nil // clean
 	f.accountModel.FetchData(1)
 	f.onUpdateTable()
 }

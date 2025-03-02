@@ -16,49 +16,54 @@ import (
 	"time"
 )
 
+var imageCache = make(map[string]*canvas.Image)
+
 type CardTable struct {
 	parentWindow     *fyne.Window
 	links            *ViewModels.LinkViewModel
 	filter           *ViewModels.FilterViewModel
-	accountViewModel *ViewModels.AccountViewModel
-	auctionViewModel *ViewModels.AuctionViewModel
+	accountVM *ViewModels.AccountViewModel
+	auctionVM *ViewModels.AuctionViewModel
 }
 
-func NewCardTable(accountVM *ViewModels.AccountViewModel, auctionViewModel *ViewModels.AuctionViewModel, links *ViewModels.LinkViewModel, filter *ViewModels.FilterViewModel, parentWindow *fyne.Window) *CardTable {
-	return &CardTable{accountViewModel: accountVM, auctionViewModel: auctionViewModel, links: links, filter: filter, parentWindow: parentWindow}
+func NewCardTable(accountVM *ViewModels.AccountViewModel, auctionVM *ViewModels.AuctionViewModel, links *ViewModels.LinkViewModel, filter *ViewModels.FilterViewModel, parentWindow *fyne.Window) *CardTable {
+	cardTable := CardTable{accountVM: accountVM, auctionVM: auctionVM, links: links, filter: filter, parentWindow: parentWindow}
+	return &cardTable
 }
 
-func (a *CardTable) Build() fyne.CanvasObject {
-	log.Println("CARD TABLE BUILD START")
+func (a *CardTable) Build() *fyne.Container {
+	log.Println("STARTED BUILDING CARD TABLE VIEW")
 	contentContainer := container.NewVBox()
+	
 	log.Println("LOADING CACHE")
-	a.accountViewModel.LoadCachedAccountData()
+	a.accountVM.LoadCachedAccountData()
 
-	data := a.accountViewModel.GetAllRaw()
-	if data == nil {
+	if a.accountVM.GetAllRaw() == nil {
 		log.Println("CACHE IS NULL, UPDATING CACHE")
-		a.accountViewModel.UpdateDataFromAccount()
+		a.accountVM.UpdateDataFromAccount()
 	}
 	log.Println("CACHE UPDATED")
 
-	cleanedCards := a.accountViewModel.GetAllCleaned()
+	cleanedCards := a.accountVM.GetAllCleaned()
 
-	if len(cleanedCards) == 0 {
+	if cleanedCards == nil {
 		return contentContainer // return without scroll background
 	}
 
-	for i := range cleanedCards {
-		data := &cleanedCards[i]
-		card := a.CreateCard(data)
+	for _, data := range cleanedCards {
+		card := a.CreateCard(&data)
 
-		a.filter.AddNewCard(&ViewModels.CardItem{Data: data, Card: card})
+		//a.filter.AddNewCard(&ViewModels.CardItem{Data: data, Card: card})
 		contentContainer.Add(card)
 	}
 
-	content := container.NewBorder(nil, nil, nil,
+	content := container.NewBorder(
+		nil,
+		nil,
+		nil,
 		CustomUITools.NewColorWSpacer(12, theme.Color(theme.ColorNameButton)), contentContainer)
 
-	return container.NewVScroll(content)
+	return content
 }
 
 func (a *CardTable) CreateCard(cleanedData *ViewModels.CleanAccountData) fyne.CanvasObject {
@@ -110,9 +115,18 @@ func (a *CardTable) CreateCard(cleanedData *ViewModels.CleanAccountData) fyne.Ca
 
 func (a *CardTable) getCardImage(cleanedData *ViewModels.CleanAccountData) fyne.CanvasObject {
 	URI, _ := a.links.GetFyneURIFromString(cleanedData.ImgUrl)
+
+	if val, ok := imageCache[cleanedData.ImgUrl]; ok {
+		log.Println("IMAGE CACHE HIT")
+		return val
+	}
+	
+	log.Println("IMAGE CACHE MISS")
 	img := canvas.NewImageFromURI(URI)
 	img.FillMode = canvas.ImageFillContain
 	img.SetMinSize(fyne.NewSize(80, 80))
+
+	imageCache[cleanedData.ImgUrl] = img
 
 	return img
 }
@@ -194,7 +208,7 @@ func (a *CardTable) cardFunctionality(cleanedData *ViewModels.CleanAccountData) 
 			auctionTimeSelect.PlaceHolder = "-- Длительность аукциона --"
 
 			submitBtn := widget.NewButton("Подтвердить", func() {
-				a.auctionViewModel.RenewAuction(cleanedData.CardUrl, auctionCategory, auctionTime)
+				a.auctionVM.RenewAuction(cleanedData.CardUrl, auctionCategory, auctionTime)
 				selectDialog.Hide()
 			})
 
