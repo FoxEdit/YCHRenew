@@ -1,18 +1,22 @@
 package Views
 
 import (
+	"image/color"
+	"log"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"github.com/FoxEdit/YCHRenew/ViewModels"
 	"github.com/FoxEdit/YCHRenew/Views/CustomUITools"
-	"image/color"
-	"log"
-	"time"
 )
 
 type MainWindow struct {
 	window fyne.Window
+
+	headerContent *fyne.Container
+	filterContent *fyne.Container
+	auctionContent *fyne.Container
+	windowContent *fyne.Container
 
 	accountViewModel     *ViewModels.AccountViewModel
 	auctionViewModel     *ViewModels.AuctionViewModel
@@ -24,6 +28,11 @@ type MainWindow struct {
 func NewMainWindow(fyneWindow fyne.Window, size fyne.Size) *MainWindow {
 	main := new(MainWindow)
 	main.window = fyneWindow
+
+	main.headerContent = container.NewStack()
+	main.filterContent = container.NewStack()
+	main.auctionContent = container.NewStack()
+	main.windowContent = container.NewStack()
 
 	main.window.SetMaster()
 	main.window.Resize(size)
@@ -46,7 +55,8 @@ func (mw *MainWindow) SetupViewModels(
 	mw.authViewModel = authViewModel
 }
 
-func (mw *MainWindow) animateLoading(isDone <-chan bool) {
+// Temporarily disabled
+/* func (mw *MainWindow) animateLoading(isDone <-chan bool) {
 	loadingText := canvas.NewText("Loading", color.White)
 	loadingText.TextSize = 24
 	loadingContainer := container.NewCenter(loadingText)
@@ -67,44 +77,61 @@ func (mw *MainWindow) animateLoading(isDone <-chan bool) {
 			mw.window.SetContent(loadingContainer)
 		}
 	}
-}
+} */
 
-func (mw *MainWindow) SetUI() {
-	// reset and build new
+func (mw *MainWindow) ProcessNewUI() {
 	mw.window.SetContent(canvas.NewRectangle(color.Transparent))
-	isDone := make(chan bool)
-	go mw.animateLoading(isDone)
-	mw.window.SetContent(mw.buildUI(isDone))
+	mw.buildAndSetAllUI()
 }
 
-func (mw *MainWindow) RefreshHeader() {
+func(mw *MainWindow) RebuildAuctionContent() {
+	mw.auctionContent.RemoveAll()
+	mw.auctionContent.Add(NewCardTable(
+		mw.accountViewModel, 
+		mw.auctionViewModel, 
+		mw.linkViewModel, 
+		mw.filterTableViewModel, 
+		&mw.window).Build())
+
+	mw.auctionContent.Refresh()
+	mw.windowContent.Refresh()
 }
 
-func (mw *MainWindow) RefreshCardTable() {
-
+func(mw *MainWindow) RebuildHeader() {
+	mw.headerContent.RemoveAll()
+	mw.headerContent.Add(NewHeaderContent(mw.linkViewModel, mw.authViewModel, &mw.window).Build())
+	mw.headerContent.Refresh()
+	mw.windowContent.Refresh()
 }
 
-func (mw *MainWindow) buildUI(isDone chan<- bool) fyne.CanvasObject {
+func(mw *MainWindow) RebuildFilter() {
+	mw.filterContent.RemoveAll()
+	mw.filterContent.Add(NewNavigationFilter(mw.filterTableViewModel).Build())
+	mw.filterContent.Refresh()
+	mw.windowContent.Refresh()
+}
+
+func (mw *MainWindow) buildAndSetAllUI() {
 	log.Println("MAIN WINDOW BUILD STARTED")
-	log.Println("BUILDING HEADER")
-	header := NewHeaderContent(mw.linkViewModel, mw.authViewModel, &mw.window).Build()
 
-	log.Println("BUILDING NAVIGATION FILTER")
-	filter := NewNavigationFilter(mw.filterTableViewModel).Build()
+	mw.headerContent.Add(NewHeaderContent(mw.linkViewModel, mw.authViewModel, &mw.window).Build())
+	mw.filterContent.Add(NewNavigationFilter(mw.filterTableViewModel).Build())
 
-	log.Println("BUILDING AUCTION TABLE")
-	cardTable := NewCardTable(mw.accountViewModel, mw.auctionViewModel, mw.linkViewModel, mw.filterTableViewModel, &mw.window).Build()
+	mw.auctionContent.Add(NewCardTable(
+		mw.accountViewModel, 
+		mw.auctionViewModel, 
+		mw.linkViewModel, 
+		mw.filterTableViewModel, 
+		&mw.window).Build())
 
-	content := container.NewHBox(filter, CustomUITools.NewSeparator(), cardTable)
-
-	isDone <- true
-	close(isDone)
-	return container.NewPadded(container.NewVBox(
-		header,
+	mw.windowContent.Add(container.NewPadded(container.NewVBox(
+		mw.headerContent,
 		CustomUITools.NewHSpacer(2.5),
 		CustomUITools.NewSeparator(),
-		content,
-	))
+		container.NewHBox(mw.filterContent, CustomUITools.NewSeparator(), container.NewVScroll(mw.auctionContent)),
+	)))
+
+	mw.window.SetContent(mw.windowContent)
 }
 
 func (mw *MainWindow) ShowAndRun() {

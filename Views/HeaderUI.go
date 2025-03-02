@@ -30,7 +30,8 @@ func NewHeaderContent(links *ViewModels.LinkViewModel, auth *ViewModels.AuthView
 	return &Header{linkViewModel: links, authViewModel: auth, parentWindow: parentWindow}
 }
 
-func (h *Header) Build() fyne.CanvasObject {
+func (h *Header) Build() *fyne.Container {
+	log.Println("STARTED BUILDING HEADER VIEW")
 	headerAvatar := h.createAvatar()
 
 	authDialog := h.createAuthChoicePopup()
